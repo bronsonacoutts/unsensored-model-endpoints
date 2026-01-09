@@ -1,0 +1,264 @@
+swagger: "2.0"
+info:
+  version: "1.0.0"
+  title: "OpenRouter (Chat + Models)"
+  description: >
+    OpenRouter unified LLM API (OpenAI-compatible). Includes:
+    - List models
+    - Create chat completion
+    - Query generation stats
+
+host: "openrouter.ai"
+basePath: "/api/v1"
+schemes:
+  - "https"
+consumes:
+  - "application/json"
+produces:
+  - "application/json"
+
+securityDefinitions:
+  OpenRouterApiKey:
+    type: "apiKey"
+    name: "Authorization"
+    in: "header"
+    description: "Use value format: Bearer <OPENROUTER_API_KEY>"
+
+security:
+  - OpenRouterApiKey: []
+
+paths:
+  /models:
+    get:
+      operationId: "ListModels"
+      summary: "List all models and their properties"
+      description: "Returns a list of available models on OpenRouter."
+      parameters:
+        - $ref: "#/parameters/HttpReferer"
+        - $ref: "#/parameters/XTitle"
+      responses:
+        "200":
+          description: "OK"
+          schema:
+            $ref: "#/definitions/ModelsResponse"
+        default:
+          description: "Error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /chat/completions:
+    post:
+      operationId: "CreateChatCompletion"
+      summary: "Create a chat completion"
+      description: "Sends a request for a model response for the given chat conversation."
+      parameters:
+        - $ref: "#/parameters/HttpReferer"
+        - $ref: "#/parameters/XTitle"
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: "#/definitions/ChatCompletionRequest"
+      responses:
+        "200":
+          description: "OK"
+          schema:
+            $ref: "#/definitions/ChatCompletionResponse"
+        default:
+          description: "Error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+  /generation:
+    get:
+      operationId: "GetGenerationStats"
+      summary: "Query generation stats"
+      description: "Retrieve cost and token stats for a completed request by generation id."
+      parameters:
+        - $ref: "#/parameters/HttpReferer"
+        - $ref: "#/parameters/XTitle"
+        - name: "id"
+          in: "query"
+          required: true
+          type: "string"
+          description: "Generation id returned from chat/completions response (id)."
+      responses:
+        "200":
+          description: "OK"
+          schema:
+            $ref: "#/definitions/GenerationStatsResponse"
+        default:
+          description: "Error"
+          schema:
+            $ref: "#/definitions/ErrorResponse"
+
+parameters:
+  HttpReferer:
+    name: "HTTP-Referer"
+    in: "header"
+    required: false
+    type: "string"
+    description: "Optional. Identifies your app on openrouter.ai (e.g., https://yourapp.example)."
+  XTitle:
+    name: "X-Title"
+    in: "header"
+    required: false
+    type: "string"
+    description: "Optional. Sets/modifies your app title for OpenRouter analytics/discovery."
+
+definitions:
+  ChatCompletionRequest:
+    type: "object"
+    required:
+      - "model"
+      - "messages"
+    properties:
+      model:
+        type: "string"
+        description: "Model id (e.g., 'openai/gpt-4o', 'meta-llama/llama-3.3-70b-instruct')."
+      messages:
+        type: "array"
+        items:
+          $ref: "#/definitions/ChatMessage"
+        description: "Conversation messages."
+      temperature:
+        type: "number"
+        format: "float"
+        minimum: 0
+        maximum: 2
+        description: "Sampling temperature."
+      top_p:
+        type: "number"
+        format: "float"
+        minimum: 0
+        maximum: 1
+        description: "Nucleus sampling."
+      max_tokens:
+        type: "integer"
+        format: "int32"
+        minimum: 1
+        description: "Maximum tokens to generate."
+      stream:
+        type: "boolean"
+        description: "If true, server may stream responses. (Power Platform typically uses non-streaming.)"
+      stop:
+        type: "array"
+        items:
+          type: "string"
+        description: "Up to 4 stop sequences."
+      user:
+        type: "string"
+        description: "Optional end-user identifier."
+
+  ChatMessage:
+    type: "object"
+    required:
+      - "role"
+      - "content"
+    properties:
+      role:
+        type: "string"
+        description: "Message role."
+        enum:
+          - "system"
+          - "user"
+          - "assistant"
+          - "tool"
+      content:
+        type: "string"
+        description: "Message text content."
+      name:
+        type: "string"
+        description: "Optional name for the participant."
+
+  ChatCompletionResponse:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        description: "Completion/generation id."
+      object:
+        type: "string"
+      created:
+        type: "integer"
+        format: "int64"
+      model:
+        type: "string"
+      choices:
+        type: "array"
+        items:
+          $ref: "#/definitions/ChatChoice"
+      usage:
+        $ref: "#/definitions/Usage"
+
+  ChatChoice:
+    type: "object"
+    properties:
+      index:
+        type: "integer"
+        format: "int32"
+      message:
+        $ref: "#/definitions/ChatMessage"
+      finish_reason:
+        type: "string"
+
+  Usage:
+    type: "object"
+    properties:
+      prompt_tokens:
+        type: "integer"
+        format: "int32"
+      completion_tokens:
+        type: "integer"
+        format: "int32"
+      total_tokens:
+        type: "integer"
+        format: "int32"
+
+  ModelsResponse:
+    type: "object"
+    properties:
+      data:
+        type: "array"
+        items:
+          $ref: "#/definitions/ModelInfo"
+
+  ModelInfo:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+      name:
+        type: "string"
+      description:
+        type: "string"
+      context_length:
+        type: "integer"
+        format: "int32"
+      pricing:
+        type: "object"
+        additionalProperties: true
+      architecture:
+        type: "object"
+        additionalProperties: true
+
+  GenerationStatsResponse:
+    type: "object"
+    properties:
+      data:
+        type: "object"
+        additionalProperties: true
+    description: "OpenRouter returns detailed stats; we leave this flexible to avoid breaking changes."
+
+  ErrorResponse:
+    type: "object"
+    properties:
+      error:
+        type: "object"
+        properties:
+          message:
+            type: "string"
+          type:
+            type: "string"
+          code:
+            type: "string"
