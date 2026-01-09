@@ -33,9 +33,6 @@ paths:
       operationId: "ListModels"
       summary: "List all models and their properties"
       description: "Returns a list of available models on OpenRouter."
-      parameters:
-        - $ref: "#/parameters/HttpReferer"
-        - $ref: "#/parameters/XTitle"
       responses:
         "200":
           description: "OK"
@@ -52,8 +49,6 @@ paths:
       summary: "Create a chat completion"
       description: "Sends a request for a model response for the given chat conversation."
       parameters:
-        - $ref: "#/parameters/HttpReferer"
-        - $ref: "#/parameters/XTitle"
         - in: "body"
           name: "body"
           required: true
@@ -75,8 +70,6 @@ paths:
       summary: "Query generation stats"
       description: "Retrieve cost and token stats for a completed request by generation id."
       parameters:
-        - $ref: "#/parameters/HttpReferer"
-        - $ref: "#/parameters/XTitle"
         - name: "id"
           in: "query"
           required: true
@@ -92,20 +85,6 @@ paths:
           schema:
             $ref: "#/definitions/ErrorResponse"
 
-parameters:
-  HttpReferer:
-    name: "HTTP-Referer"
-    in: "header"
-    required: false
-    type: "string"
-    description: "Optional. Identifies your app on openrouter.ai (e.g., https://yourapp.example)."
-  XTitle:
-    name: "X-Title"
-    in: "header"
-    required: false
-    type: "string"
-    description: "Optional. Sets/modifies your app title for OpenRouter analytics/discovery."
-
 definitions:
   ChatCompletionRequest:
     type: "object"
@@ -116,6 +95,10 @@ definitions:
       model:
         type: "string"
         description: "Model id (e.g., 'openai/gpt-4o', 'meta-llama/llama-3.3-70b-instruct')."
+        x-ms-dynamic-values:
+          operationId: "ListModels"
+          value-path: "id"
+          value-title: "id"
       messages:
         type: "array"
         items:
